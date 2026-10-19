@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TexoModo</title>
+  <meta name="description" content="Review Mode for websites: comments anchored to the page, Google sign-in, per-site reviewer lists, device frames and an audit trail.">
+  <style>
+    :root { --ink: #1c1c1a; --muted: #5f5f58; --line: #e4e3dc; --accent: #07351f; --gold: #c6a34d; --bg: #faf9f5; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 680px; margin: 0 auto; padding: 72px 20px 96px; }
+    h1 { font: 700 40px/1.1 Georgia, "Times New Roman", serif; letter-spacing: -0.01em; margin: 0 0 12px; }
+    .tag { color: var(--muted); font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 36px; }
+    p { margin: 0 0 18px; }
+    h2 { font: 700 20px/1.3 Georgia, serif; margin: 40px 0 10px; }
+    ul { padding-left: 20px; margin: 0 0 18px; }
+    li { margin-bottom: 6px; }
+    .note { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 20px; color: var(--muted); font-size: 15px; }
+    .mark { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--gold); border: 2px solid var(--accent); vertical-align: middle; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="tag"><span class="mark" aria-hidden="true"></span>TexoModo</div>
+    <h1>Comment on a website, right on the page.</h1>
+    <p>TexoModo adds a Review Mode to a static website. Reviewers open the site, sign in with Google, click an element or draw on the page, and leave a comment. Maintainers verify, resolve and keep an audit trail. Visitors never see any of it.</p>
+
+    <h2>What it does</h2>
+    <ul>
+      <li>Comments anchored to elements, shapes, shared components like the header, or site-wide style rules.</li>
+      <li>Phone, tablet and desktop frames, so a comment says which sizes it applies to.</li>
+      <li>Per-site reviewer lists by Google Workspace domain or individual account. Roles for reviewers and maintainers.</li>
+      <li>Every change logged: who edited, moved, verified or resolved what, and on which build.</li>
+      <li>One script tag per page. Nothing loads until the review button is clicked.</li>
+    </ul>
+
+    <h2>Where it is</h2>
+    <p>Private beta, in use on one church website redesign. Coming next: turning a verified comment into a proposed change, reviewed as a pull request with a preview.</p>
+
+    <p class="note">Built on Supabase and Netlify. Comments are stored per site, protected by database policies, and visible only to that site's reviewers.</p>
+  </main>
+</body>
+</html>

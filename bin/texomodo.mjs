@@ -1,0 +1,47 @@
+#!/usr/bin/env node
+/**
+ * texomodo <command> [options]
+ *
+ *   build       copy the overlay into the publish directory and write config.json
+ *   serve       serve the publish directory on $PORT (default 8080)
+ *   dev         build, then serve
+ *   check       pre-deploy checks (pages, build, secrets)
+ *   allowlist   sync this site's reviewer list to Supabase (needs the secret key; local only)
+ *
+ * Options
+ *   --site <dir>   publish directory, default "site"
+ *   --out <dir>    folder inside it for the overlay, default "review"
+ *   --port <n>     serve/dev port
+ *   --print        allowlist: print SQL instead of applying
+ *
+ * The project root is the current working directory (npm sets it to the
+ * package root when run through "npm run").
+ */
+import { build } from '../lib/build.mjs';
+import { serve } from '../lib/serve.mjs';
+import { check } from '../lib/check.mjs';
+import { allowlist } from '../lib/allowlist.mjs';
+
+const args = process.argv.slice(2);
+const command = args.find((a) => !a.startsWith('--'));
+const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : fallback; };
+const flag = (name) => args.includes(`--${name}`);
+const root = process.cwd();
+const siteDir = opt('site', 'site');
+const outDir = opt('out', 'review');
+
+try {
+  switch (command) {
+    case 'build': build({ root, siteDir, outDir }); break;
+    case 'serve': serve({ root, siteDir, port: Number(opt('port', process.env.PORT || 8080)) }); break;
+    case 'dev': build({ root, siteDir, outDir }); serve({ root, siteDir, port: Number(opt('port', process.env.PORT || 8080)) }); break;
+    case 'check': process.exitCode = check({ root, siteDir, outDir }) ? 1 : 0; break;
+    case 'allowlist': await allowlist({ root, print: flag('print') }); break;
+    default:
+      console.log('usage: texomodo <build|serve|dev|check|allowlist> [--site dir] [--out dir] [--port n] [--print]');
+      process.exitCode = command ? 1 : 0;
+  }
+} catch (e) {
+  console.error(e.message);
+  process.exitCode = 1;
+}

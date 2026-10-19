@@ -1,0 +1,13 @@
+# texomodo.com: the landing page (www/) and, later, the Phase 2 functions.
+# No build step: www/ is static. Project sites are NOT built from this repo;
+# each one depends on the texomodo package and has its own Netlify project.
+
+[build]
+  publish = "www"
+  functions = "netlify/functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

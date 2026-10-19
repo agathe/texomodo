@@ -1,0 +1,36 @@
+{
+  "name": "texomodo",
+  "version": "0.1.0",
+  "description": "Review Mode for static websites: a comment and annotation overlay with Google sign-in, per-site reviewer lists, device frames and an audit trail, on Supabase.",
+  "homepage": "https://texomodo.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agathe/texomodo.git"
+  },
+  "type": "module",
+  "bin": {
+    "texomodo": "bin/texomodo.mjs"
+  },
+  "exports": {
+    ".": "./lib/build.mjs",
+    "./build": "./lib/build.mjs",
+    "./serve": "./lib/serve.mjs",
+    "./check": "./lib/check.mjs",
+    "./allowlist": "./lib/allowlist.mjs"
+  },
+  "types": "overlay/types.d.ts",
+  "files": [
+    "bin",
+    "lib",
+    "overlay",
+    "supabase",
+    "docs",
+    ".env.example"
+  ],
+  "scripts": {
+    "check": "node scripts/check.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

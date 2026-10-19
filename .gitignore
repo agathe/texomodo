@@ -1,0 +1,12 @@
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+secrets/
+client_secret*.json
+
+# Tooling
+node_modules/
+.netlify/
+.DS_Store
+*.tgz
