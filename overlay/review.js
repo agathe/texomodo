@@ -1747,8 +1747,8 @@
     fetch(S.base + 'config.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error('config.json ' + r.status); return r.json(); })
       .then(function (cfg) {
         S.config = cfg;
-        if (cfg.mode === 'disabled') throw new Error('Review Mode is not configured on this deployment (set SUPABASE_URL, SUPABASE_ANON_KEY and SITE_ID).');
-        if (cfg.mode === 'supabase' && !cfg.site) throw new Error('Review Mode is misconfigured: config.json has no site id (set SITE_ID at build time).');
+        if (cfg.mode === 'disabled') throw new Error('Review Mode is not configured on this deployment (set SUPABASE_URL, SUPABASE_ANON_KEY and TEXOMODO_SITE_ID).');
+        if (cfg.mode === 'supabase' && !cfg.site) throw new Error('Review Mode is misconfigured: config.json has no site id (set TEXOMODO_SITE_ID at build time).');
         return authenticate();
       })
       .then(function (ok) {

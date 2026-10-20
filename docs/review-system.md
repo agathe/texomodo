@@ -24,7 +24,7 @@ page.html                              page.html
 - **Config (`site/review/config.json`):** generated at build time by `texomodo build` from environment variables. Contains only public values (Supabase URL, anon key, site id and name, domain hint) and build metadata (commit, branch, Netlify context, deploy URL). Not committed.
 - **Backend:** Supabase. Google OAuth through Supabase Auth; tables `sites`, `review_access`, `annotations`, `annotation_replies`, `annotation_events`, `change_requests` with Row Level Security; a private Storage bucket for screenshots; realtime on the comment tables. Schema: `supabase/migrations/` (run in order).
 - **Authorization:** the `review_access` table holds domains and emails per site. `review_is_authorized(site_id)` is a SECURITY DEFINER function used by every RLS policy, so hiding the toolbar is cosmetic and the database is the gate. The browser cannot read the allowlist. It is managed from `.env` with `npm run allowlist`.
-- **Sites:** one Supabase project (and one Google OAuth client) can serve several websites. Each deploy is built with a `SITE_ID`; every comment, policy and screenshot path is scoped by it. See "Sites" below.
+- **Sites:** one Supabase project (and one Google OAuth client) can serve several websites. Each deploy is built with a `TEXOMODO_SITE_ID`; every comment, policy and screenshot path is scoped by it. See "Sites" below.
 - **Netlify:** publishes `site/` only, so `docs/`, `data/`, `supabase/` and `scripts/` are never deployed; the build command runs `texomodo build`; a stub function `change-request` reserves the Phase 2 endpoint.
 - **Other hosts:** `npm run build` then `npm start` serves `site/` on `$PORT` (works on Railway or any Node host). Build metadata falls back from Netlify's variables to Railway's (`RAILWAY_GIT_COMMIT_SHA`, `RAILWAY_GIT_BRANCH`, `RAILWAY_PUBLIC_DOMAIN`) and then to local git.
 
@@ -46,13 +46,13 @@ Length caps keep records small: element text 300 chars, nearby text 500, HTML 1,
 
 ### Sites: several websites on one Supabase project
 
-Every review row belongs to a **site** (`sites.id`, a short slug such as `allsaints`). The deploy says which site it is through the `SITE_ID` environment variable, which `texomodo build` writes into `config.json`; the overlay sends it with every query and the policies check it on every row. Nothing in the UI changes for reviewers.
+Every review row belongs to a **site** (`sites.id`, a short slug such as `allsaints`). The deploy says which site it is through the `TEXOMODO_SITE_ID` environment variable, which `texomodo build` writes into `config.json`; the overlay sends it with every query and the policies check it on every row. Nothing in the UI changes for reviewers.
 
 - **Allowlist per site.** `review_access.site` says which site a row grants. A reviewer for one parish never learns the other parish's site exists: the "not authorized" dialog is the same as for an unknown account. Roles are per site too, so someone can be maintainer on one site and reviewer on another.
 - **Platform admins.** A row with `site = NULL` grants every site. `PLATFORM_ADMINS` in `.env` manages those rows; leave it empty in a site's own repo so one site cannot remove another's admins.
 - **Screenshots** live under `<site>/<page>/<id>.jpg`; the storage policies read the first folder of the object path.
 - **Realtime** subscribes per site. Comments for other sites are never delivered (RLS applies to realtime).
-- **Adding a website:** deploy its repo with the same `SUPABASE_URL` / `SUPABASE_ANON_KEY` and a new `SITE_ID`, add its domains to the Supabase redirect allowlist, then from that repo set its allowlist in `.env` and run `npm run allowlist` (which creates the `sites` row). The Google consent screen is shared, so name it after the platform rather than one parish.
+- **Adding a website:** deploy its repo with the same `SUPABASE_URL` / `SUPABASE_ANON_KEY` and a new `TEXOMODO_SITE_ID`, add its domains to the Supabase redirect allowlist, then from that repo set its allowlist in `.env` and run `npm run allowlist` (which creates the `sites` row). The Google consent screen is shared, so name it after the platform rather than one parish.
 - **Phase 2:** the change-request pipeline maps `site` to a repository; `change_requests` reaches the site through its annotation (`review_annotation_site()`).
 - **Functions** take `site_id` (never a parameter named `site`: in a SQL function a column of the same name would win over the parameter and the check would be void). `review_sites()` lists the sites the caller may review, for a future switcher.
 
@@ -122,8 +122,8 @@ While a tool is active the annotation layer takes the pointer, so anything that 
 |---|---|---|
 | `SUPABASE_URL` | Netlify + local `.env` | Project URL (public) |
 | `SUPABASE_ANON_KEY` | Netlify + local `.env` | The **publishable** key (`sb_publishable_…`, "anon" on the Legacy tab). Public; RLS protects data. The build refuses a secret key here. |
-| `SITE_ID` | Netlify + local `.env` | Which website this deploy is inside the Supabase project, e.g. `allsaints`. Lowercase slug; must exist in `sites` (`npm run allowlist` creates it). Required with Supabase. |
-| `SITE_NAME` | Netlify + local `.env` | Display name for messages. Also sets `sites.name` when the allowlist is synced. |
+| `TEXOMODO_SITE_ID` | Netlify + local `.env` | Which website this deploy is inside the Supabase project, e.g. `allsaints`. Lowercase slug; must exist in `sites` (`npm run allowlist` creates it). Required with Supabase. |
+| `TEXOMODO_SITE_NAME` | Netlify + local `.env` | Display name for messages. Also sets `sites.name` when the allowlist is synced. |
 | `ALLOWED_GOOGLE_DOMAIN` | local `.env` (and Netlify for the hint) | Google Workspace domain whose accounts may review, e.g. `asccnc.org`. Enforced via the `review_access` table, not at build time. |
 | `ALLOWED_EMAILS` | local `.env` | Comma-separated individual accounts (personal Gmail reviewers). |
 | `ALLOWED_MAINTAINERS` | local `.env` | Comma-separated emails with the maintainer role on this site (verify, resolve, edit anyone's comments). |
@@ -154,7 +154,7 @@ For Google sign-in on localhost, add `http://localhost:8080/**` to the Supabase 
    - `https://<site>.netlify.app/**`
    - `https://deploy-preview-*--<site>.netlify.app/**` (Deploy Previews, needed for Phase 2)
    - `http://localhost:8080/**`
-4. Allowlist: put `SITE_ID`, `SITE_NAME`, `ALLOWED_GOOGLE_DOMAIN` / `ALLOWED_EMAILS` / `ALLOWED_MAINTAINERS` and the service role key in `.env`, then `npm run allowlist` (it also creates the `sites` row). (Or `npm run allowlist -- --print` and paste the SQL into the editor if you prefer not to keep the service key locally.)
+4. Allowlist: put `TEXOMODO_SITE_ID`, `TEXOMODO_SITE_NAME`, `ALLOWED_GOOGLE_DOMAIN` / `ALLOWED_EMAILS` / `ALLOWED_MAINTAINERS` and the service role key in `.env`, then `npm run allowlist` (it also creates the `sites` row). (Or `npm run allowlist -- --print` and paste the SQL into the editor if you prefer not to keep the service key locally.)
 5. Optional hardening: Authentication → Providers → Google → restrict to your Workspace domain as well. The database check still applies to personal accounts on the list.
 
 ## Google OAuth setup
@@ -172,7 +172,7 @@ The overlay requests `prompt=select_account` so reviewers with several Google ac
 
 ## Netlify configuration
 
-1. Site configuration → Environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SITE_ID`, `SITE_NAME`, `ALLOWED_GOOGLE_DOMAIN` (hint only). Do **not** add the service role key.
+1. Site configuration → Environment variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TEXOMODO_SITE_ID`, `TEXOMODO_SITE_NAME`, `ALLOWED_GOOGLE_DOMAIN` (hint only). Do **not** add the service role key.
 2. Build settings come from `netlify.toml` (command `node `texomodo build``, publish `site`). Make sure the UI doesn't override them.
 3. Deploy. Visit any page, click "Comment / Review", sign in.
 4. For Deploy Previews to support sign-in, the redirect allowlist in Supabase must include the preview pattern (above).

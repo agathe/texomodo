@@ -3,7 +3,7 @@
 --
 -- Every review table now belongs to a site. One Supabase project and one
 -- Google OAuth client can serve any number of deployed websites; each deploy
--- says which site it is (SITE_ID at build time, written to config.json) and
+-- says which site it is (TEXOMODO_SITE_ID at build time, written to config.json) and
 -- every query, policy and storage path is scoped by it.
 --
 --   sites           one row per website (id = short slug, e.g. 'allsaints')
@@ -19,7 +19,7 @@
 --
 -- BEFORE RUNNING on a project that already holds comments: the backfill below
 -- assigns every existing row to the site id in `existing_site`. Change it if
--- your SITE_ID is not 'allsaints'. Safe to re-run.
+-- your TEXOMODO_SITE_ID is not 'allsaints'. Safe to re-run.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -32,7 +32,7 @@ create table if not exists public.sites (
   created_at  timestamptz not null default now()
 );
 comment on table public.sites is
-  'One row per reviewed website. id is the SITE_ID the deploy is built with. Managed by scripts/sync-allowlist.mjs (service role); not readable from the browser.';
+  'One row per reviewed website. id is the TEXOMODO_SITE_ID the deploy is built with. Managed by scripts/sync-allowlist.mjs (service role); not readable from the browser.';
 alter table public.sites enable row level security;
 revoke all on public.sites from anon, authenticated;
 
@@ -55,7 +55,7 @@ create index if not exists review_access_site_idx on public.review_access (site)
 comment on column public.review_access.site is
   'Site this row grants access to. NULL grants every site (platform admin); only email rows should be platform-wide.';
 comment on table public.review_access is
-  'Who may enter Review Mode, per site. kind=domain matches any Google account on that domain; kind=email matches one account. Managed by scripts/sync-allowlist.mjs from SITE_ID + ALLOWED_GOOGLE_DOMAIN / ALLOWED_EMAILS / ALLOWED_MAINTAINERS (and PLATFORM_ADMINS for site = NULL rows).';
+  'Who may enter Review Mode, per site. kind=domain matches any Google account on that domain; kind=email matches one account. Managed by scripts/sync-allowlist.mjs from TEXOMODO_SITE_ID + ALLOWED_GOOGLE_DOMAIN / ALLOWED_EMAILS / ALLOWED_MAINTAINERS (and PLATFORM_ADMINS for site = NULL rows).';
 
 -- ----------------------------------------------------------------------------
 -- Annotations carry the site. Children reach it through the annotation.
@@ -301,6 +301,6 @@ drop table if exists existing_site;
 -- To add a second website on this project:
 --   insert into public.sites (id, name) values ('stmarys', 'St Mary Parish');
 --   insert into public.review_access (site, kind, value, role) values ('stmarys', 'domain', 'stmarys.org', 'reviewer');
---   -- or, from that site's repo: SITE_ID=stmarys in .env, then `npm run allowlist`
+--   -- or, from that site's repo: TEXOMODO_SITE_ID=stmarys in .env, then `npm run allowlist`
 -- To make someone a maintainer on every site:
 --   insert into public.review_access (site, kind, value, role, note) values (null, 'email', 'you@example.org', 'maintainer', 'PLATFORM_ADMINS');
