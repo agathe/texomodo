@@ -142,6 +142,15 @@ body.tm-drawer-open #tm-toolbar { left: calc((100vw - var(--tm-drawer-w)) / 2); 
 .tm-drawer-head h2 { font-family: Georgia, serif; font-weight: 500; font-size: 20px; line-height: 1.15; margin: 4px 0 2px; color: var(--tm-primary-dark); }
 .tm-drawer-head .tm-path { font-size: 12px; color: var(--tm-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .tm-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.tm-seg { display: inline-flex; margin-top: 10px; border: 1px solid var(--tm-line); border-radius: 999px; padding: 2px; background: var(--tm-cream); }
+.tm-seg-btn { border: 0; background: none; padding: 5px 11px; border-radius: 999px; font-weight: 700; font-size: 12px; color: var(--tm-muted); cursor: pointer; }
+.tm-seg-btn[aria-pressed="true"] { background: #fff; color: var(--tm-ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.tm-seg-btn .tm-count { font-weight: 600; opacity: 0.7; margin-left: 2px; }
+.tm-group--page { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.tm-group--page .tm-group-title { font-weight: 800; color: var(--tm-ink); }
+.tm-group--page .tm-group-path { font-weight: 500; color: var(--tm-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.tm-group--current .tm-group-path { color: var(--tm-accent-dark); }
+.tm-group--page .tm-count { font-weight: 600; color: var(--tm-muted); }
 .tm-icon-btn { border: 1px solid var(--tm-line); background: #fff; color: var(--tm-ink); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-grid; place-items: center; }
 .tm-icon-btn:hover { border-color: var(--tm-accent); }
 .tm-icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }

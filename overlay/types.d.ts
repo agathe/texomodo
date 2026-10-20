@@ -222,6 +222,8 @@ export interface ChangeRequest {
 /** Storage adapter implemented by review.js for Supabase and (dev only) localStorage. */
 export interface ReviewStore {
   listForPage(page: string): Promise<Annotation[]>;
+  /** Every comment of the site; the drawer derives the page list from it and shows the rest under "All pages". */
+  listAll(): Promise<Annotation[]>;
   create(input: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'authorId'>): Promise<Annotation>;
   reply(annotationId: string, body: string): Promise<Reply>;
   setStatus(annotationId: string, status: AnnotationStatus, resolution?: AnnotationResolution): Promise<void>;

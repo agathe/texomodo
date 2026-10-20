@@ -777,6 +777,14 @@
           return rows.map(rowToAnnotation);
         });
       },
+      // Every comment of this site (the drawer's "All pages" view; also the source
+      // of the page list, so one query serves both).
+      listAll: function () {
+        return client.from('annotations').select('*, annotation_replies(*), annotation_events(*)').eq('site', site).then(check).then(function (rows) {
+          rows.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
+          return rows.map(rowToAnnotation);
+        });
+      },
       create: function (input) {
         return client.from('annotations').insert({
           site: site, page: input.page, url: input.url, title: input.title, type: input.type, geometry: input.geometry,
@@ -836,6 +844,7 @@
       updateReply: function (replyId, body) { var list = read(); list.forEach(function (a) { (a.replies || []).forEach(function (r) { if (r.id === replyId) { r.body = body; r.editedAt = new Date().toISOString(); logEv(a, 'reply_edited', { replyId: replyId }); } }); }); write(list); return Promise.resolve(); },
       removeReply: function (replyId) { var list = read(); list.forEach(function (a) { var before = (a.replies || []).length; a.replies = (a.replies || []).filter(function (r) { return r.id !== replyId; }); if (a.replies.length !== before) logEv(a, 'reply_deleted', { replyId: replyId }); }); write(list); return Promise.resolve(); },
       listForPage: function (page) { return Promise.resolve(read().filter(function (a) { return a.page === page || (a.scope && a.scope !== 'page'); })); },
+      listAll: function () { return Promise.resolve(read()); },
       create: function (input) {
         var now = new Date().toISOString();
         var a = Object.assign({}, input, { id: uid(), authorId: 'local', createdAt: now, updatedAt: now, replies: [], events: [], status: 'open', resolution: null, resolvedAt: null, resolvedBy: null, verifiedAt: null, verifiedBy: null, editedAt: null, editedBy: null, screenshotPath: null });
@@ -1248,9 +1257,11 @@
   // Data
   // =========================================================================
   function byId(id) { return S.annotations.filter(function (a) { return a.id === id; })[0] || null; }
+  function isForThisPage(a) { return a.page === pagePath() || !!(a.scope && a.scope !== 'page'); }
   function reload() {
-    return S.store.listForPage(pagePath()).then(function (list) {
-      S.annotations = list;
+    return S.store.listAll().then(function (all) {
+      S.all = all;
+      S.annotations = all.filter(isForThisPage);
       // Keep the selected thread visible after a status change.
       var sel = S.selectedId && byId(S.selectedId);
       if (sel && S.filter !== 'all' && (S.filter === 'resolved' ? sel.status !== 'resolved' : sel.status === 'resolved')) S.filter = 'all';
@@ -1359,19 +1370,30 @@
     var ta0 = S.draft && drawer.querySelector('#tm-draft-text'); if (ta0) S.draft.comment = ta0.value;
     while (drawer.firstChild) drawer.removeChild(drawer.firstChild);
 
-    var title = document.title.replace(/\s+[—–-]\s+All Saints.*$/i, '');
+    var allView = S.view === 'all';
+    var allHere = (S.all || []).filter(belongsHere);
+    var pageTotal = S.annotations.filter(belongsHere).length;
+    var pageSet = {}; allHere.forEach(function (a) { pageSet[a.page] = 1; });
+    var pageCount = Object.keys(pageSet).length;
+    var seg = el('div', { class: 'tm-seg', role: 'group', 'aria-label': 'Which comments to list' }, [
+      el('button', { class: 'tm-seg-btn', type: 'button', 'aria-pressed': allView ? 'false' : 'true', onClick: function () { setView('page'); } }, ['This page ', el('span', { class: 'tm-count', text: String(pageTotal) })]),
+      el('button', { class: 'tm-seg-btn', type: 'button', 'aria-pressed': allView ? 'true' : 'false', title: 'Every comment on this site, grouped by page', onClick: function () { setView('all'); } }, ['All pages ', el('span', { class: 'tm-count', text: String(allHere.length) })]),
+    ]);
     var head = el('div', { class: 'tm-drawer-head' }, [
       el('div', { class: 'tm-head-row' }, [
-        el('div', {}, [el('div', { class: 'tm-kicker', text: 'TexoModo' }), el('h2', { text: title, tabindex: '-1' }), el('div', { class: 'tm-path', text: pagePath() })]),
+        el('div', {}, [el('div', { class: 'tm-kicker', text: 'TexoModo' }),
+          el('h2', { text: allView ? 'All pages' : shortTitle(document.title), tabindex: '-1' }),
+          el('div', { class: 'tm-path', text: allView ? allHere.length + ' comment' + (allHere.length === 1 ? '' : 's') + ' on ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') : pagePath() })]),
         el('button', { class: 'tm-icon-btn', type: 'button', 'aria-label': 'Close comments', onClick: closeDrawer }, [svgIcon(ICONS.close)]),
       ]),
       userRow(),
+      seg,
     ]);
     drawer.appendChild(head);
 
     var counts = { open: 0, resolved: 0, toVerify: 0 };
     var others = [];
-    S.annotations.forEach(function (a) { if (!belongsHere(a)) { others.push(a); return; } if (a.status === 'resolved') counts.resolved++; else { counts.open++; if (a.status === 'open') counts.toVerify++; } });
+    (allView ? (S.all || []) : S.annotations).forEach(function (a) { if (!belongsHere(a)) { others.push(a); return; } if (a.status === 'resolved') counts.resolved++; else { counts.open++; if (a.status === 'open') counts.toVerify++; } });
     var tabs = el('div', { class: 'tm-tabs', role: 'tablist' });
     [['open', 'Open', counts.open], ['resolved', 'Resolved', counts.resolved], ['all', 'All', counts.open + counts.resolved]].forEach(function (t) {
       tabs.appendChild(el('button', { class: 'tm-tab', role: 'tab', type: 'button', 'aria-selected': S.filter === t[0] ? 'true' : 'false', onClick: function () { S.filter = t[0]; try { sessionStorage.setItem('tm:filter', S.filter); } catch (e) {} renderMarkers(); renderDrawer(); } },
@@ -1384,6 +1406,7 @@
     if (isMaintainer() && counts.toVerify && S.filter !== 'resolved') body.appendChild(el('div', { class: 'tm-note' }, [svgIcon(ICONS.verify), ' ' + counts.toVerify + ' comment' + (counts.toVerify > 1 ? 's' : '') + ' awaiting verification']));
     if (S.retarget) body.appendChild(el('div', { class: 'tm-note tm-note--active' }, ['Moving comment: use the ' + TOOLS[S.retarget.tool] + ' tool on the page. Esc cancels. ', el('button', { class: 'tm-link', type: 'button', text: 'Cancel', onClick: cancelRetarget })]));
     if (S.draft) body.appendChild(composerCard());
+    if (allView) { renderAllPages(body, others); drawer.appendChild(body); appendDrawerFoot(drawer); restoreDrawerState(drawer, body, scrollTop, activeId); return; }
     var list = visibleAnnotations();
     var here = list.filter(function (a) { return (a.scope || 'page') === 'page'; });
     var shared = list.filter(function (a) { return (a.scope || 'page') !== 'page'; });
@@ -1406,7 +1429,79 @@
       if (!S.othersCollapsed) others.slice().reverse().forEach(function (a) { body.appendChild(commentCard(a, S.annotations.indexOf(a) + 1)); });
     }
     drawer.appendChild(body);
-
+    appendDrawerFoot(drawer);
+    restoreDrawerState(drawer, body, scrollTop, activeId);
+  }
+  function restoreDrawerState(drawer, body, scrollTop, activeId) {
+    body.scrollTop = scrollTop;
+    if (activeId) { var again = drawer.querySelector('#' + activeId); if (again) again.focus({ preventScroll: true }); }
+  }
+  // Page title without the site name suffix ("Mass Times — All Saints…" -> "Mass Times").
+  function shortTitle(t) {
+    var m = /^(.{2,}?)\s+[—–|·-]\s+.+$/.exec(t || '');
+    return m ? m[1] : (t || pagePath());
+  }
+  function setView(v) {
+    S.view = v === 'all' ? 'all' : 'page';
+    try { sessionStorage.setItem('tm:view', S.view); } catch (e) {}
+    renderDrawer();
+  }
+  // Order pages the way the site presents them: home first, then the order of the
+  // links in the page's own navigation, then anything else alphabetically.
+  function pageOrder() {
+    var order = {}, i = 0;
+    var home = (new URL('./', location.href)).pathname.replace(/\/index\.html$/, '/');
+    order[home] = i++; order[home + 'index.html'] = i++;
+    var links = document.querySelectorAll('[data-component="primary-nav"] a[href], [data-component="utility-bar"] a[href], [data-component="site-header"] a[href], nav a[href], [data-component="site-footer"] a[href]');
+    for (var k = 0; k < links.length; k++) {
+      try {
+        var u = new URL(links[k].getAttribute('href'), location.href);
+        if (u.origin !== location.origin) continue;
+        var path = u.pathname.replace(/\/index\.html$/, '/');
+        if (!(path in order)) order[path] = i++;
+      } catch (e) {}
+    }
+    return function (path) { return path in order ? order[path] : 10000; };
+  }
+  // Open a comment that lives on another page: navigate there with the deep link,
+  // keeping the drawer, the filter and the "All pages" view across the navigation.
+  function goToComment(a) {
+    saveDraft();
+    try { sessionStorage.setItem('tm:drawerOpen', '1'); sessionStorage.setItem('tm:view', 'all'); } catch (e) {}
+    var u = new URL(a.page, location.href); u.searchParams.set('review', a.id);
+    location.href = u.toString();
+  }
+  function renderAllPages(body, others) {
+    var rank = pageOrder();
+    var list = (S.all || []).filter(function (a) { return belongsHere(a) && (S.filter === 'all' || (S.filter === 'resolved' ? a.status === 'resolved' : a.status !== 'resolved')); });
+    if (!list.length) {
+      body.appendChild(el('div', { class: 'tm-empty' }, [el('strong', { text: (S.all || []).length ? 'Nothing ' + S.filter + ' anywhere on the site.' : 'No comments on the site yet.' })]));
+    }
+    var shared = list.filter(function (a) { return (a.scope || 'page') !== 'page'; });
+    var byPage = {};
+    list.forEach(function (a) { if ((a.scope || 'page') !== 'page') return; (byPage[a.page] = byPage[a.page] || []).push(a); });
+    var pages = Object.keys(byPage).sort(function (p, q) { var d = rank(p) - rank(q); return d || (p < q ? -1 : 1); });
+    pages.forEach(function (page) {
+      var items = byPage[page];
+      var title = shortTitle(items[items.length - 1].title || '') || page;
+      var current = page === pagePath();
+      body.appendChild(el('div', { class: 'tm-group tm-group--page' + (current ? ' tm-group--current' : ''), title: page }, [
+        el('span', { class: 'tm-group-title', text: title }), el('span', { class: 'tm-group-path', text: current ? 'this page' : page }), el('span', { class: 'tm-count', text: String(items.length) }),
+      ]));
+      items.slice().reverse().forEach(function (a) { body.appendChild(commentCard(a, S.annotations.indexOf(a) + 1 || items.indexOf(a) + 1)); });
+    });
+    if (shared.length) {
+      body.appendChild(el('button', { class: 'tm-group', type: 'button', 'aria-expanded': S.sharedCollapsed ? 'false' : 'true', onClick: function () { S.sharedCollapsed = !S.sharedCollapsed; renderDrawer(); } },
+        [(S.sharedCollapsed ? '\u25b8 ' : '\u25be ') + 'Shared components & site-wide (' + shared.length + ')']));
+      if (!S.sharedCollapsed) shared.slice().reverse().forEach(function (a) { body.appendChild(commentCard(a, S.annotations.indexOf(a) + 1)); });
+    }
+    if (others.length && isMaintainer()) {
+      body.appendChild(el('button', { class: 'tm-group', type: 'button', 'aria-expanded': S.othersCollapsed ? 'false' : 'true', title: 'Comments made on commits this deployment does not contain', onClick: function () { S.othersCollapsed = !S.othersCollapsed; renderDrawer(); } },
+        [(S.othersCollapsed ? '\u25b8 ' : '\u25be ') + 'Other branches & builds (' + others.length + ')']));
+      if (!S.othersCollapsed) others.slice().reverse().forEach(function (a) { body.appendChild(commentCard(a, S.annotations.indexOf(a) + 1)); });
+    }
+  }
+  function appendDrawerFoot(drawer) {
     var b = S.config.build || {};
     drawer.appendChild(el('div', { class: 'tm-drawer-foot' }, [
       el('span', { class: 'tm-legend' }, [el('i'), ' open']),
@@ -1418,9 +1513,6 @@
         return el('label', { for: 'tm-include-others', class: 'tm-switch', title: 'Show comments from main and from commits in this branch\'s history. Turn off if this branch is a separate site.' }, [cb, ' Include comments from ' + (b.mainBranch || 'main')]);
       })() : null,
     ]));
-
-    body.scrollTop = scrollTop;
-    if (activeId) { var again = drawer.querySelector('#' + activeId); if (again) again.focus({ preventScroll: true }); }
   }
   function userRow() {
     var u = S.user || {};
@@ -1556,7 +1648,8 @@
     var expanded = a.id === S.selectedId;
     var mine = isMine(a), editable = canEdit(a), resolved = a.status === 'resolved';
     var card = el('div', { class: 'tm-card' + (expanded ? ' tm-card--selected' : ' tm-card--collapsed') + (resolved ? ' tm-card--resolved' : ''), 'data-id': a.id });
-    card.appendChild(el('button', { class: 'tm-card-head', type: 'button', 'aria-expanded': expanded ? 'true' : 'false', onClick: function () { if (expanded) { S.selectedId = null; syncHeldState(); renderMarkers(); renderDrawer(); } else select(a.id); } }, [
+    var elsewhere = (a.scope || 'page') === 'page' && a.page !== pagePath();
+    card.appendChild(el('button', { class: 'tm-card-head', type: 'button', 'aria-expanded': expanded ? 'true' : 'false', title: elsewhere ? 'Open ' + a.page + ' and show this comment' : null, onClick: function () { if (elsewhere) { goToComment(a); return; } if (expanded) { S.selectedId = null; syncHeldState(); renderMarkers(); renderDrawer(); } else select(a.id); } }, [
       el('span', { class: 'tm-num', text: String(num), 'aria-hidden': 'true' }),
       el('span', { class: 'tm-card-meta' }, [
         el('strong', { text: (a.author && a.author.name) || 'Reviewer' }),
@@ -1759,7 +1852,7 @@
         if (S.frame) window.addEventListener('message', onFrameMessage);
         S.unsubscribe = S.store.subscribe(pagePath(), function () { reload(); });
         var wasOpen = false;
-        try { wasOpen = sessionStorage.getItem('tm:drawerOpen') === '1'; var f = sessionStorage.getItem('tm:filter'); if (f === 'open' || f === 'resolved' || f === 'all') S.filter = f; } catch (e) {}
+        try { wasOpen = sessionStorage.getItem('tm:drawerOpen') === '1'; var f = sessionStorage.getItem('tm:filter'); if (f === 'open' || f === 'resolved' || f === 'all') S.filter = f; S.view = sessionStorage.getItem('tm:view') === 'all' ? 'all' : 'page'; } catch (e) {}
         return reload().then(function () {
           if (restoreDraft()) return;
           if (opts.focus) {

@@ -64,6 +64,10 @@ The rule: **a comment is shown on a deployment when the commit it was made on is
 
 What reviewers see: a chip on comments from another branch or build ("main · 3 commits ago", "branch fix-nav", "not in this deploy"); counts and markers only include comments that belong here; maintainers get a collapsed "Other branches & builds" group so nothing is lost; on a non-main branch the drawer footer has "Include comments from main" (per browser), to turn off for a branch that is a separate site. `MAIN_BRANCH` in the environment overrides the default "main".
 
+### All pages
+
+The drawer header has a switch: **This page** (comments on the current page plus shared ones, the default) and **All pages** (every comment on the site). The counts next to each are totals for the deployment being viewed. In All pages, comments are grouped by page in the order the site's own navigation lists them, home first, with the current page marked; the Open / Resolved / All tabs filter the whole list. Selecting a comment from another page navigates to that page with the comment focused, and the drawer stays in All pages, so a reviewer can walk the whole site from one list. The overlay loads all of a site's comments in one query and derives the page list from it, so the switch costs nothing.
+
 ### Simple and advanced mode
 
 The drawer header has an **Advanced** switch, remembered per browser (`localStorage`). The toolbar is the same in both modes: one "Select element" control (its arrow opens a menu with Select element, Rectangle, Circle and Draw), the View control, Hold hover, Comments and Exit. Simple mode (the default) is for commenters: a comment shows its screenshot, section and element text; the composer is a screenshot plus a text box. The inferred scope, category and sizes still apply underneath. Each comment and the composer keep a **Details** link that reveals the hidden parts for that one item. Advanced mode shows everything: selectors, style rules, held state, the breadcrumb, "Applies to", "About", "Sizes" and "Check on" controls.
