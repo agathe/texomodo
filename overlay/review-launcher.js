@@ -51,12 +51,21 @@
       var v = pos.indexOf('top') === 0 ? 'top' : 'bottom', h = pos.indexOf('left') >= 0 ? 'left' : 'right';
       return { v: v, h: h, off: off, small: Math.max(8, off - 4) };
     }
-    // data-accent="#0f766e" on the script tag recolours markers, buttons and focus rings.
+    // data-accent on the script tag: a preset (amber, indigo, teal, magenta,
+    // vermilion) or a hex colour. One value; the overlay derives the rest, and the
+    // text colour on top of the accent flips to dark ink for light accents.
+    var PRESETS = { amber: '#d4a017', indigo: '#5b5bd6', teal: '#0e8a8a', magenta: '#c2418f', vermilion: '#e8552f' };
     function applyAccent() {
-      var v = script && script.getAttribute('data-accent');
-      if (!v || !/^#[0-9a-f]{3,8}$|^[a-z]{3,20}$/i.test(v)) return;
-      document.documentElement.style.setProperty('--tm-accent', v);
-      document.documentElement.style.setProperty('--tm-accent-dark', v);
+      var v = ((script && script.getAttribute('data-accent')) || '').trim().toLowerCase();
+      if (!v) return;
+      var hex = PRESETS[v] || (/^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(v) ? v : null);
+      if (!hex) return;
+      var h = hex.length === 4 ? '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3] : hex;
+      var r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16);
+      var lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; // rough perceived brightness
+      var root = document.documentElement.style;
+      root.setProperty('--tm-accent', h);
+      root.setProperty('--tm-on-accent', lum > 0.55 ? '#1f1f1d' : '#ffffff');
     }
     function addButton() {
       if (document.getElementById('tm-launch')) return;
@@ -67,7 +76,7 @@
         '#tm-launch{position:fixed;' + p.h + ':' + p.off + 'px;' + p.v + ':' + p.off + 'px;z-index:9998;display:inline-flex;align-items:center;gap:8px;' +
         'padding:10px 14px;border-radius:999px;border:1px solid #3a3a36;background:#1f1f1d;color:#fff;font:600 13px/1 Inter,ui-sans-serif,system-ui,sans-serif;' +
         'box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;opacity:.92}' +
-        '#tm-launch:hover,#tm-launch:focus-visible{opacity:1;outline:2px solid var(--tm-accent,#e8552f);outline-offset:2px}' +
+        '#tm-launch:hover,#tm-launch:focus-visible{opacity:1;outline:2px solid var(--tm-accent,#d4a017);outline-offset:2px}' +
         '#tm-launch svg{width:15px;height:15px}' +
         '@media(max-width:650px){#tm-launch{' + p.h + ':' + p.small + 'px;' + p.v + ':' + p.small + 'px;padding:9px 12px}}' +
         '@media print{#tm-launch{display:none}}';
@@ -77,7 +86,7 @@
       btn.type = 'button';
       btn.setAttribute('aria-label', 'Comment or review this page');
       // The TexoModo mark: a dot in a ring, the same shape as a comment marker on the page.
-      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="var(--tm-accent,#e8552f)"/></svg><span>Comment / Review</span>';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="var(--tm-accent,#d4a017)"/></svg><span>Comment / Review</span>';
       btn.addEventListener('click', function () {
         btn.disabled = true;
         btn.querySelector('span').textContent = 'Loading…';

@@ -4,14 +4,17 @@
    The page itself is never restyled, and page scrolling is never locked.
    ========================================================================== */
 :root {
-  /* TexoModo palette: charcoal + one accent on warm paper. A site may override
-     --tm-accent with data-accent on the launcher tag; alpha variants derive from it. */
+  /* TexoModo palette: charcoal + ONE accent on warm paper. Default accent: amber.
+     A site sets another with data-accent on the launcher tag (a preset name or a
+     hex colour); the darker shade, the pale tint and the text colour on top of
+     the accent all derive from it. */
   --tm-primary: #2b2b28;
   --tm-primary-dark: #1a1a18;
   --tm-deep: #1f1f1d;
-  --tm-accent: #e8552f;
-  --tm-accent-dark: #c8431f;
-  --tm-accent-soft: #fdeae4;
+  --tm-accent: #d4a017;
+  --tm-on-accent: #1f1f1d;
+  --tm-accent-dark: color-mix(in srgb, var(--tm-accent) 70%, black);
+  --tm-accent-soft: color-mix(in srgb, var(--tm-accent) 14%, white);
   --tm-cream: #faf9f5;
   --tm-ink: #1f1f1d;
   --tm-muted: #6b6b64;
@@ -50,7 +53,7 @@
 .tm-marker {
   position: absolute; pointer-events: auto; transform: translate(-50%, -50%);
   min-width: 28px; height: 28px; padding: 0 7px; border-radius: 999px;
-  border: 2px solid #fff; background: var(--tm-accent); color: #fff;
+  border: 2px solid #fff; background: var(--tm-accent); color: var(--tm-on-accent);
   font: 800 13px/1 var(--tm-font); cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); z-index: 2;
 }
@@ -76,7 +79,7 @@
   cursor: pointer; white-space: nowrap;
 }
 #tm-toolbar .tm-tool:hover { background: rgba(255, 255, 255, 0.1); }
-#tm-toolbar .tm-tool[aria-pressed="true"] { background: var(--tm-accent); color: #fff; }
+#tm-toolbar .tm-tool[aria-pressed="true"] { background: var(--tm-accent); color: var(--tm-on-accent); }
 #tm-toolbar .tm-tool--exit { color: #d9d9d4; }
 #tm-toolbar .tm-tool svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #tm-toolbar .tm-sep { width: 1px; height: 22px; background: rgba(255, 255, 255, 0.25); margin: 0 3px; }
@@ -85,14 +88,14 @@
 #tm-toolbar .tm-split-main { padding: 6px 9px 6px 11px; font-size: 12px; font-weight: 650; border-radius: 999px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.25); gap: 7px; }
 #tm-toolbar .tm-split-main svg { width: 14px; height: 14px; }
 #tm-toolbar .tm-split-main svg:last-child { width: 12px; height: 12px; opacity: 0.9; }
-#tm-toolbar .tm-split-main[aria-pressed="true"] { background: var(--tm-accent); color: var(--tm-deep); border-color: var(--tm-accent); }
+#tm-toolbar .tm-split-main[aria-pressed="true"] { background: var(--tm-accent); color: var(--tm-on-accent); border-color: var(--tm-accent); }
 #tm-toolbar .tm-menu { position: absolute; left: 0; bottom: calc(100% + 10px); min-width: 200px; padding: 6px; border-radius: 12px; background: #fff; color: var(--tm-ink); border: 1px solid var(--tm-line); box-shadow: var(--tm-shadow); z-index: 2; }
 #tm-toolbar .tm-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: none; color: var(--tm-ink); font: 600 13px var(--tm-font); text-align: left; cursor: pointer; }
 #tm-toolbar .tm-menu-item:hover, #tm-toolbar .tm-menu-item:focus-visible { background: var(--tm-cream); outline: none; }
 #tm-toolbar .tm-menu-item[aria-checked="true"] { background: var(--tm-accent-soft); color: var(--tm-deep); }
 #tm-toolbar .tm-menu-item svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #tm-toolbar .tm-menu-item--stop { border-top: 1px solid var(--tm-line); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 10px; color: var(--tm-muted); }
-#tm-toolbar .tm-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--tm-accent); color: var(--tm-deep); font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; }
+#tm-toolbar .tm-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--tm-accent); color: var(--tm-on-accent); font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; }
 #tm-toolbar .tm-tool[aria-pressed="true"] .tm-badge { background: var(--tm-deep); color: #fff; }
 #tm-toolbar .tm-hint { font-size: 12px; color: #dfe9e2; padding: 0 10px; }
 #tm-toolbar .tm-tool-select { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; padding: 7px 10px; font: 650 12px var(--tm-font); cursor: pointer; max-width: 150px; }
@@ -105,7 +108,7 @@ body.tm-drawer-open #tm-shell .tm-shell-stage { margin-right: var(--tm-drawer-w)
 .tm-shell-title { font-weight: 800; font-size: 13px; color: #d9d9d4; margin-right: 6px; }
 .tm-shell-btn { border: 1px solid transparent; background: rgba(255, 255, 255, 0.08); color: #fff; border-radius: 999px; padding: 6px 12px; font: 650 13px var(--tm-font); cursor: pointer; }
 .tm-shell-btn:hover { background: rgba(255, 255, 255, 0.16); }
-.tm-shell-btn[aria-pressed="true"] { background: var(--tm-accent); color: var(--tm-deep); }
+.tm-shell-btn[aria-pressed="true"] { background: var(--tm-accent); color: var(--tm-on-accent); }
 .tm-shell-btn--exit { margin-left: auto; color: #d9d9d4; }
 .tm-shell-width { font-size: 12px; color: #dfe9e2; margin-left: 4px; }
 .tm-shell-stage { flex: 1; display: grid; place-items: start center; overflow: hidden; padding: 12px; transition: margin-right 0.2s ease; }
@@ -160,7 +163,7 @@ body.tm-drawer-open #tm-toolbar { left: calc((100vw - var(--tm-drawer-w)) / 2); 
 .tm-card--selected { border-color: var(--tm-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tm-accent) 20%, transparent); }
 .tm-card--resolved { background: #fbfbf8; }
 .tm-card-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; }
-.tm-card-head .tm-num { min-width: 24px; height: 24px; border-radius: 999px; background: var(--tm-accent); color: var(--tm-deep); font-weight: 800; font-size: 12px; display: inline-grid; place-items: center; flex: none; }
+.tm-card-head .tm-num { min-width: 24px; height: 24px; border-radius: 999px; background: var(--tm-accent); color: var(--tm-on-accent); font-weight: 800; font-size: 12px; display: inline-grid; place-items: center; flex: none; }
 .tm-card--resolved .tm-card-head .tm-num { background: #fff; color: var(--tm-primary); border: 2px solid var(--tm-primary); }
 .tm-card-meta { min-width: 0; flex: 1; }
 .tm-card-meta strong { display: block; font-size: 13px; }

@@ -29,7 +29,7 @@ A project is a repo with a publish directory (`site/` by default) of static page
    }
    ```
 
-2. Put one tag on every page, before `</body>`: `<script src="review/review-launcher.js" defer></script>`. Optionally mark shared blocks with `data-component="site-header"` and the like, so comments on the header appear on every page. The button sits bottom-right by default; `data-position="bottom-left"` (or `top-right`, `top-left`) and `data-offset="24"` on the script tag move it, for example away from a host's own badge. `data-accent="#0f766e"` recolours markers and buttons when TexoModo's vermilion clashes with the site.
+2. Put one tag on every page, before `</body>`: `<script src="review/review-launcher.js" defer></script>`. Optionally mark shared blocks with `data-component="site-header"` and the like, so comments on the header appear on every page. The button sits bottom-right by default; `data-position="bottom-left"` (or `top-right`, `top-left`) and `data-offset="24"` on the script tag move it, for example away from a host's own badge. `data-accent` changes the colour of markers and buttons: a preset (`amber`, the default; `indigo`, `teal`, `magenta`, `vermilion`) or any hex colour such as `#0f766e`. One value is enough; the overlay derives the rest.
 3. Copy `.env.example` to `.env` and fill it in: the Supabase URL and publishable key, a `TEXOMODO_SITE_ID`, the reviewer domain / emails / maintainers, and the secret key (local only). Run `npm run allowlist` once: it creates the site in the database and its reviewer list.
 4. Deploy. On Netlify: build command `npm run build`, publish `site`, environment variables `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TEXOMODO_SITE_ID`, `TEXOMODO_SITE_NAME`, `ALLOWED_GOOGLE_DOMAIN`. Never the secret key.
 

@@ -1,4 +1,4 @@
-:root { --ink: #1f1f1d; --muted: #6b6b64; --line: #e4e3dc; --accent: #e8552f; --bg: #faf9f5; }
+:root { --ink: #1f1f1d; --muted: #6b6b64; --line: #e4e3dc; --accent: #d4a017; --bg: #faf9f5; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
 main { max-width: 680px; margin: 0 auto; padding: 72px 20px 96px; }
