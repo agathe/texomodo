@@ -44,7 +44,15 @@ No dependencies. Node 18 or newer.
 npm run check                 # syntax, RLS on every table, overlay files, secrets, a throwaway build
 ```
 
-To work on the overlay against a real site, link this folder into the project: in the project, `npm link ../texomodo` (or a `node_modules/texomodo` symlink), then `npm run dev` there.
+To work on the overlay against a real site, link this checkout into the project instead of the installed copy, then run the project's dev server in local mode:
+
+```bash
+cd ../prototype-all-saints
+rm -rf node_modules/texomodo && ln -s ../../texomodo node_modules/texomodo   # use this checkout
+npm run dev -- --local        # browser-only Review Mode, no Supabase; rebuilds when overlay/ changes
+```
+
+Edit `overlay/*.js` or `overlay/review.css` here, reload the page there. `npm install` in the project restores the pinned copy from GitHub whenever you want to go back.
 
 ## Security in one paragraph
 
