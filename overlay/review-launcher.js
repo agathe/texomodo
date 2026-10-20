@@ -51,16 +51,24 @@
       var v = pos.indexOf('top') === 0 ? 'top' : 'bottom', h = pos.indexOf('left') >= 0 ? 'left' : 'right';
       return { v: v, h: h, off: off, small: Math.max(8, off - 4) };
     }
+    // data-accent="#0f766e" on the script tag recolours markers, buttons and focus rings.
+    function applyAccent() {
+      var v = script && script.getAttribute('data-accent');
+      if (!v || !/^#[0-9a-f]{3,8}$|^[a-z]{3,20}$/i.test(v)) return;
+      document.documentElement.style.setProperty('--tm-accent', v);
+      document.documentElement.style.setProperty('--tm-accent-dark', v);
+    }
     function addButton() {
       if (document.getElementById('tm-launch')) return;
+      applyAccent();
       var p = placement();
       var style = document.createElement('style');
       style.textContent =
         '#tm-launch{position:fixed;' + p.h + ':' + p.off + 'px;' + p.v + ':' + p.off + 'px;z-index:9998;display:inline-flex;align-items:center;gap:8px;' +
-        'padding:10px 14px;border-radius:999px;border:1px solid #c6a34d;background:#07351f;color:#fff;font:600 13px/1 Inter,ui-sans-serif,system-ui,sans-serif;' +
-        'box-shadow:0 8px 24px rgba(7,53,31,.28);cursor:pointer;opacity:.92}' +
-        '#tm-launch:hover,#tm-launch:focus-visible{opacity:1;outline:2px solid #c6a34d;outline-offset:2px}' +
-        '#tm-launch svg{width:15px;height:15px;fill:none;stroke:#f2d98f;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}' +
+        'padding:10px 14px;border-radius:999px;border:1px solid #3a3a36;background:#1f1f1d;color:#fff;font:600 13px/1 Inter,ui-sans-serif,system-ui,sans-serif;' +
+        'box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;opacity:.92}' +
+        '#tm-launch:hover,#tm-launch:focus-visible{opacity:1;outline:2px solid var(--tm-accent,#e8552f);outline-offset:2px}' +
+        '#tm-launch svg{width:15px;height:15px}' +
         '@media(max-width:650px){#tm-launch{' + p.h + ':' + p.small + 'px;' + p.v + ':' + p.small + 'px;padding:9px 12px}}' +
         '@media print{#tm-launch{display:none}}';
       document.head.appendChild(style);
@@ -68,7 +76,8 @@
       btn.id = 'tm-launch';
       btn.type = 'button';
       btn.setAttribute('aria-label', 'Comment or review this page');
-      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.3A8 8 0 1 1 21 12z"/></svg><span>Comment / Review</span>';
+      // The TexoModo mark: a dot in a ring, the same shape as a comment marker on the page.
+      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="var(--tm-accent,#e8552f)"/></svg><span>Comment / Review</span>';
       btn.addEventListener('click', function () {
         btn.disabled = true;
         btn.querySelector('span').textContent = 'Loading…';
@@ -87,11 +96,12 @@
       ph.id = 'tm-drawer-placeholder';
       ph.setAttribute('data-tm', '');
       ph.setAttribute('aria-hidden', 'true');
-      ph.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;z-index:9996;background:#fff;border-left:1px solid #e4e3dc;box-shadow:0 14px 40px rgba(7,53,31,.22)';
+      ph.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;z-index:9996;background:#fff;border-left:1px solid #e4e3dc;box-shadow:0 14px 40px rgba(0,0,0,.2)';
       if (matchMedia('(max-width: 650px)').matches) ph.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:66vh;z-index:9996;background:#fff;border-top:1px solid #e4e3dc;border-radius:16px 16px 0 0';
       document.body.appendChild(ph);
     }
     function init() {
+      applyAccent();
       if (view && window.top === window) { start({ frame: view, focus: deepLink }); return; } // this window hosts the device frame
       placeholder();
       addButton();
