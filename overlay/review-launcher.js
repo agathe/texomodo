@@ -42,16 +42,26 @@
         .catch(function (err) { console.warn('[review] unavailable:', err && err.message); });
     }
 
+    // Where the button sits. The page chooses with attributes on the script tag:
+    //   <script src="review/review-launcher.js" data-position="bottom-left" data-offset="24" defer>
+    // position: bottom-right (default) | bottom-left | top-right | top-left; offset in px (default 16).
+    function placement() {
+      var pos = ((script && script.getAttribute('data-position')) || 'bottom-right').toLowerCase();
+      var off = parseInt(script && script.getAttribute('data-offset'), 10); if (!(off >= 0)) off = 16;
+      var v = pos.indexOf('top') === 0 ? 'top' : 'bottom', h = pos.indexOf('left') >= 0 ? 'left' : 'right';
+      return { v: v, h: h, off: off, small: Math.max(8, off - 4) };
+    }
     function addButton() {
       if (document.getElementById('tm-launch')) return;
+      var p = placement();
       var style = document.createElement('style');
       style.textContent =
-        '#tm-launch{position:fixed;right:16px;bottom:16px;z-index:9998;display:inline-flex;align-items:center;gap:8px;' +
+        '#tm-launch{position:fixed;' + p.h + ':' + p.off + 'px;' + p.v + ':' + p.off + 'px;z-index:9998;display:inline-flex;align-items:center;gap:8px;' +
         'padding:10px 14px;border-radius:999px;border:1px solid #c6a34d;background:#07351f;color:#fff;font:600 13px/1 Inter,ui-sans-serif,system-ui,sans-serif;' +
         'box-shadow:0 8px 24px rgba(7,53,31,.28);cursor:pointer;opacity:.92}' +
         '#tm-launch:hover,#tm-launch:focus-visible{opacity:1;outline:2px solid #c6a34d;outline-offset:2px}' +
         '#tm-launch svg{width:15px;height:15px;fill:none;stroke:#f2d98f;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}' +
-        '@media(max-width:650px){#tm-launch{right:12px;bottom:12px;padding:9px 12px}}' +
+        '@media(max-width:650px){#tm-launch{' + p.h + ':' + p.small + 'px;' + p.v + ':' + p.small + 'px;padding:9px 12px}}' +
         '@media print{#tm-launch{display:none}}';
       document.head.appendChild(style);
       var btn = document.createElement('button');

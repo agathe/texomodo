@@ -29,7 +29,7 @@ A project is a repo with a publish directory (`site/` by default) of static page
    }
    ```
 
-2. Put one tag on every page, before `</body>`: `<script src="review/review-launcher.js" defer></script>`. Optionally mark shared blocks with `data-component="site-header"` and the like, so comments on the header appear on every page.
+2. Put one tag on every page, before `</body>`: `<script src="review/review-launcher.js" defer></script>`. Optionally mark shared blocks with `data-component="site-header"` and the like, so comments on the header appear on every page. The button sits bottom-right by default; `data-position="bottom-left"` (or `top-right`, `top-left`) and `data-offset="24"` on the script tag move it, for example away from a host's own badge.
 3. Copy `.env.example` to `.env` and fill it in: the Supabase URL and publishable key, a `TEXOMODO_SITE_ID`, the reviewer domain / emails / maintainers, and the secret key (local only). Run `npm run allowlist` once: it creates the site in the database and its reviewer list.
 4. Deploy. On Netlify: build command `npm run build`, publish `site`, environment variables `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `TEXOMODO_SITE_ID`, `TEXOMODO_SITE_NAME`, `ALLOWED_GOOGLE_DOMAIN`. Never the secret key.
 

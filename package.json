@@ -1,6 +1,6 @@
 {
   "name": "texomodo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Review Mode for static websites: a comment and annotation overlay with Google sign-in, per-site reviewer lists, device frames and an audit trail, on Supabase.",
   "homepage": "https://texomodo.com",
   "repository": {
