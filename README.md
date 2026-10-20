@@ -14,6 +14,7 @@ Site: https://texomodo.com. Status: private beta, used on the All Saints Catholi
 | `netlify/functions/` | `change-request` stub, the Phase 2 extension point (annotation → AI → branch → PR → preview) |
 | `docs/` | `review-system.md` (architecture, setup, security), `ai-change-requests.md` (Phase 2 design) |
 | `www/` | The texomodo.com landing page (Netlify publish directory of this repo) |
+| `www/mark*.{svg,png}`, `www/wordmark*.{svg,png}` | Brand assets: the mark (a dot in a ring, amber on charcoal) and the wordmark. The wordmark is set in Cinzel (SIL Open Font License) and shipped as outlines, so no font is needed to use it. |
 | `.env.example` | Template for a project's `.env` |
 
 ## Using it on a website
