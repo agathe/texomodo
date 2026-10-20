@@ -777,10 +777,17 @@
           return rows.map(rowToAnnotation);
         });
       },
-      // Every comment of this site (the drawer's "All pages" view; also the source
-      // of the page list, so one query serves both).
-      listAll: function () {
-        return client.from('annotations').select('*, annotation_replies(*), annotation_events(*)').eq('site', site).then(check).then(function (rows) {
+      // "All pages" support. count(): one HEAD request for the switch's total.
+      // index(): a few columns per comment, enough to order pages and count by
+      // status. listPages(pages): full rows for a handful of page groups at a time.
+      count: function () {
+        return client.from('annotations').select('id', { count: 'exact', head: true }).eq('site', site).then(function (res) { return res.error ? null : res.count; });
+      },
+      index: function () {
+        return client.from('annotations').select('id, page, title, status, scope, build').eq('site', site).then(check);
+      },
+      listPages: function (pages) {
+        return client.from('annotations').select('*, annotation_replies(*), annotation_events(*)').eq('site', site).eq('scope', 'page').in('page', pages).then(check).then(function (rows) {
           rows.sort(function (a, b) { return a.created_at < b.created_at ? -1 : 1; });
           return rows.map(rowToAnnotation);
         });
@@ -844,7 +851,9 @@
       updateReply: function (replyId, body) { var list = read(); list.forEach(function (a) { (a.replies || []).forEach(function (r) { if (r.id === replyId) { r.body = body; r.editedAt = new Date().toISOString(); logEv(a, 'reply_edited', { replyId: replyId }); } }); }); write(list); return Promise.resolve(); },
       removeReply: function (replyId) { var list = read(); list.forEach(function (a) { var before = (a.replies || []).length; a.replies = (a.replies || []).filter(function (r) { return r.id !== replyId; }); if (a.replies.length !== before) logEv(a, 'reply_deleted', { replyId: replyId }); }); write(list); return Promise.resolve(); },
       listForPage: function (page) { return Promise.resolve(read().filter(function (a) { return a.page === page || (a.scope && a.scope !== 'page'); })); },
-      listAll: function () { return Promise.resolve(read()); },
+      count: function () { return Promise.resolve(read().length); },
+      index: function () { return Promise.resolve(read().map(function (a) { return { id: a.id, page: a.page, title: a.title, status: a.status, scope: a.scope || 'page', build: a.build }; })); },
+      listPages: function (pages) { return Promise.resolve(read().filter(function (a) { return (a.scope || 'page') === 'page' && pages.indexOf(a.page) >= 0; })); },
       create: function (input) {
         var now = new Date().toISOString();
         var a = Object.assign({}, input, { id: uid(), authorId: 'local', createdAt: now, updatedAt: now, replies: [], events: [], status: 'open', resolution: null, resolvedAt: null, resolvedBy: null, verifiedAt: null, verifiedBy: null, editedAt: null, editedBy: null, screenshotPath: null });
@@ -1257,16 +1266,44 @@
   // Data
   // =========================================================================
   function byId(id) { return S.annotations.filter(function (a) { return a.id === id; })[0] || null; }
-  function isForThisPage(a) { return a.page === pagePath() || !!(a.scope && a.scope !== 'page'); }
   function reload() {
-    return S.store.listAll().then(function (all) {
-      S.all = all;
-      S.annotations = all.filter(isForThisPage);
+    return Promise.all([S.store.listForPage(pagePath()), S.store.count()]).then(function (res) {
+      S.annotations = res[0]; S.total = res[1];
       // Keep the selected thread visible after a status change.
       var sel = S.selectedId && byId(S.selectedId);
       if (sel && S.filter !== 'all' && (S.filter === 'resolved' ? sel.status !== 'resolved' : sel.status === 'resolved')) S.filter = 'all';
       renderMarkers(); renderDrawer();
+      if (S.view === 'all') return loadAllPages(true);
     }).catch(function (err) { toast('Could not load comments: ' + err.message, 'error', 5000); });
+  }
+  // "All pages" data, fetched only when that view is open: a lightweight index of
+  // every comment (to order pages and count), then full rows for the page groups
+  // currently shown, PAGE_BATCH groups at a time ("Show more pages").
+  var PAGE_BATCH = 4;
+  function allPagesOrdered() {
+    var rank = pageOrder(), byPage = {};
+    (S.index || []).forEach(function (r) { if ((r.scope || 'page') !== 'page' || !belongsHere(r)) return; (byPage[r.page] = byPage[r.page] || { page: r.page, title: r.title, open: 0, resolved: 0 }); if (r.status === 'resolved') byPage[r.page].resolved++; else byPage[r.page].open++; });
+    var here = pagePath();
+    return Object.keys(byPage).sort(function (p, q) {
+      if (p === here) return -1; if (q === here) return 1; // the page being viewed comes first
+      var d = rank(p) - rank(q); return d || (p < q ? -1 : 1);
+    }).map(function (p) { return byPage[p]; });
+  }
+  function loadAllPages(refresh) {
+    if (S.allLoading) return Promise.resolve();
+    S.allLoading = true;
+    if (!S.shownPages) S.shownPages = PAGE_BATCH;
+    var p = (refresh || !S.index) ? S.store.index().then(function (idx) { S.index = idx; if (refresh) S.groups = {}; }) : Promise.resolve();
+    return p.then(function () {
+      var want = allPagesOrdered().slice(0, S.shownPages).map(function (g) { return g.page; }).filter(function (page) { return !(S.groups && S.groups[page]); });
+      if (!want.length) return;
+      return S.store.listPages(want).then(function (rows) {
+        S.groups = S.groups || {};
+        want.forEach(function (page) { S.groups[page] = []; });
+        rows.forEach(function (a) { (S.groups[a.page] = S.groups[a.page] || []).push(a); });
+      });
+    }).then(function () { S.allLoading = false; renderDrawer(); })
+      .catch(function (err) { S.allLoading = false; toast('Could not load comments: ' + err.message, 'error', 5000); });
   }
   function visibleAnnotations() {
     return S.annotations.filter(function (a) { return belongsHere(a) && (S.filter === 'all' || (S.filter === 'resolved' ? a.status === 'resolved' : a.status !== 'resolved')); });
@@ -1371,19 +1408,19 @@
     while (drawer.firstChild) drawer.removeChild(drawer.firstChild);
 
     var allView = S.view === 'all';
-    var allHere = (S.all || []).filter(belongsHere);
+    var indexHere = (S.index || []).filter(belongsHere);
+    var allTotal = S.index ? indexHere.length : (S.total == null ? '' : S.total);
     var pageTotal = S.annotations.filter(belongsHere).length;
-    var pageSet = {}; allHere.forEach(function (a) { pageSet[a.page] = 1; });
-    var pageCount = Object.keys(pageSet).length;
+    var pageCount = allPagesOrdered().length;
     var seg = el('div', { class: 'tm-seg', role: 'group', 'aria-label': 'Which comments to list' }, [
-      el('button', { class: 'tm-seg-btn', type: 'button', 'aria-pressed': allView ? 'false' : 'true', onClick: function () { setView('page'); } }, ['This page ', el('span', { class: 'tm-count', text: String(pageTotal) })]),
-      el('button', { class: 'tm-seg-btn', type: 'button', 'aria-pressed': allView ? 'true' : 'false', title: 'Every comment on this site, grouped by page', onClick: function () { setView('all'); } }, ['All pages ', el('span', { class: 'tm-count', text: String(allHere.length) })]),
+      el('button', { class: 'tm-seg-btn', type: 'button', 'aria-pressed': allView ? 'false' : 'true', onClick: function () { setDrawerView('page'); } }, ['This page ', el('span', { class: 'tm-count', text: String(pageTotal) })]),
+      el('button', { class: 'tm-seg-btn', type: 'button', 'aria-pressed': allView ? 'true' : 'false', title: 'Every comment on this site, grouped by page', onClick: function () { setDrawerView('all'); } }, ['All pages ', el('span', { class: 'tm-count', text: String(allTotal) })]),
     ]);
     var head = el('div', { class: 'tm-drawer-head' }, [
       el('div', { class: 'tm-head-row' }, [
         el('div', {}, [el('div', { class: 'tm-kicker', text: 'TexoModo' }),
           el('h2', { text: allView ? 'All pages' : shortTitle(document.title), tabindex: '-1' }),
-          el('div', { class: 'tm-path', text: allView ? allHere.length + ' comment' + (allHere.length === 1 ? '' : 's') + ' on ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') : pagePath() })]),
+          el('div', { class: 'tm-path', text: allView ? (S.index ? indexHere.length + ' comment' + (indexHere.length === 1 ? '' : 's') + ' on ' + pageCount + ' page' + (pageCount === 1 ? '' : 's') : 'Loading…') : pagePath() })]),
         el('button', { class: 'tm-icon-btn', type: 'button', 'aria-label': 'Close comments', onClick: closeDrawer }, [svgIcon(ICONS.close)]),
       ]),
       userRow(),
@@ -1393,7 +1430,8 @@
 
     var counts = { open: 0, resolved: 0, toVerify: 0 };
     var others = [];
-    (allView ? (S.all || []) : S.annotations).forEach(function (a) { if (!belongsHere(a)) { others.push(a); return; } if (a.status === 'resolved') counts.resolved++; else { counts.open++; if (a.status === 'open') counts.toVerify++; } });
+    (allView && S.index ? S.index : S.annotations).forEach(function (a) { if (!belongsHere(a)) { others.push(a); return; } if (a.status === 'resolved') counts.resolved++; else { counts.open++; if (a.status === 'open') counts.toVerify++; } });
+    if (allView) others = S.annotations.filter(function (a) { return !belongsHere(a); }); // full rows exist only for this page
     var tabs = el('div', { class: 'tm-tabs', role: 'tablist' });
     [['open', 'Open', counts.open], ['resolved', 'Resolved', counts.resolved], ['all', 'All', counts.open + counts.resolved]].forEach(function (t) {
       tabs.appendChild(el('button', { class: 'tm-tab', role: 'tab', type: 'button', 'aria-selected': S.filter === t[0] ? 'true' : 'false', onClick: function () { S.filter = t[0]; try { sessionStorage.setItem('tm:filter', S.filter); } catch (e) {} renderMarkers(); renderDrawer(); } },
@@ -1441,26 +1479,32 @@
     var m = /^(.{2,}?)\s+[—–|·-]\s+.+$/.exec(t || '');
     return m ? m[1] : (t || pagePath());
   }
-  function setView(v) {
+  function setDrawerView(v) {
     S.view = v === 'all' ? 'all' : 'page';
     try { sessionStorage.setItem('tm:view', S.view); } catch (e) {}
     renderDrawer();
+    if (S.view === 'all') loadAllPages(!S.index);
   }
   // Order pages the way the site presents them: home first, then the order of the
-  // links in the page's own navigation, then anything else alphabetically.
+  // links in the page's own navigation (top-level items before dropdown children,
+  // which is what the mobile menu lists), then anything else alphabetically.
   function pageOrder() {
     var order = {}, i = 0;
     var home = (new URL('./', location.href)).pathname.replace(/\/index\.html$/, '/');
     order[home] = i++; order[home + 'index.html'] = i++;
-    var links = document.querySelectorAll('[data-component="primary-nav"] a[href], [data-component="utility-bar"] a[href], [data-component="site-header"] a[href], nav a[href], [data-component="site-footer"] a[href]');
-    for (var k = 0; k < links.length; k++) {
-      try {
-        var u = new URL(links[k].getAttribute('href'), location.href);
-        if (u.origin !== location.origin) continue;
-        var path = u.pathname.replace(/\/index\.html$/, '/');
-        if (!(path in order)) order[path] = i++;
-      } catch (e) {}
-    }
+    // One selector at a time: the main navigation outranks the utility bar and the
+    // footer regardless of where they sit in the document.
+    ['[data-component="mobile-menu"] a[href]', '[data-component="primary-nav"] a[href]', '[data-component="site-header"] a[href]', 'nav a[href]', '[data-component="utility-bar"] a[href]', '[data-component="site-footer"] a[href]', 'main a[href]'].forEach(function (sel) {
+      var links = document.querySelectorAll(sel);
+      for (var k = 0; k < links.length; k++) {
+        try {
+          var u = new URL(links[k].getAttribute('href'), location.href);
+          if (u.origin !== location.origin) continue;
+          var path = u.pathname.replace(/\/index\.html$/, '/');
+          if (!(path in order)) order[path] = i++;
+        } catch (e) {}
+      }
+    });
     return function (path) { return path in order ? order[path] : 10000; };
   }
   // Open a comment that lives on another page: navigate there with the deep link,
@@ -1472,24 +1516,33 @@
     location.href = u.toString();
   }
   function renderAllPages(body, others) {
-    var rank = pageOrder();
-    var list = (S.all || []).filter(function (a) { return belongsHere(a) && (S.filter === 'all' || (S.filter === 'resolved' ? a.status === 'resolved' : a.status !== 'resolved')); });
-    if (!list.length) {
-      body.appendChild(el('div', { class: 'tm-empty' }, [el('strong', { text: (S.all || []).length ? 'Nothing ' + S.filter + ' anywhere on the site.' : 'No comments on the site yet.' })]));
+    var passes = function (a) { return S.filter === 'all' || (S.filter === 'resolved' ? a.status === 'resolved' : a.status !== 'resolved'); };
+    if (!S.index) { body.appendChild(el('div', { class: 'tm-empty' }, [el('strong', { text: 'Loading comments…' })])); return; }
+    var groups = allPagesOrdered().filter(function (g) { return S.filter === 'all' ? true : (S.filter === 'resolved' ? g.resolved > 0 : g.open > 0); });
+    var shared = S.annotations.filter(function (a) { return (a.scope || 'page') !== 'page' && belongsHere(a) && passes(a); });
+    if (!groups.length && !shared.length) {
+      body.appendChild(el('div', { class: 'tm-empty' }, [el('strong', { text: S.index.length ? 'Nothing ' + S.filter + ' anywhere on the site.' : 'No comments on the site yet.' })]));
     }
-    var shared = list.filter(function (a) { return (a.scope || 'page') !== 'page'; });
-    var byPage = {};
-    list.forEach(function (a) { if ((a.scope || 'page') !== 'page') return; (byPage[a.page] = byPage[a.page] || []).push(a); });
-    var pages = Object.keys(byPage).sort(function (p, q) { var d = rank(p) - rank(q); return d || (p < q ? -1 : 1); });
-    pages.forEach(function (page) {
-      var items = byPage[page];
-      var title = shortTitle(items[items.length - 1].title || '') || page;
-      var current = page === pagePath();
-      body.appendChild(el('div', { class: 'tm-group tm-group--page' + (current ? ' tm-group--current' : ''), title: page }, [
-        el('span', { class: 'tm-group-title', text: title }), el('span', { class: 'tm-group-path', text: current ? 'this page' : page }), el('span', { class: 'tm-count', text: String(items.length) }),
+    var shown = groups.slice(0, S.shownPages || PAGE_BATCH);
+    shown.forEach(function (g) {
+      var current = g.page === pagePath();
+      var n = S.filter === 'all' ? g.open + g.resolved : (S.filter === 'resolved' ? g.resolved : g.open);
+      body.appendChild(el('div', { class: 'tm-group tm-group--page' + (current ? ' tm-group--current' : ''), title: g.page }, [
+        el('span', { class: 'tm-group-title', text: shortTitle(g.title || '') || g.page }), el('span', { class: 'tm-group-path', text: current ? 'this page' : g.page }), el('span', { class: 'tm-count', text: String(n) }),
       ]));
-      items.slice().reverse().forEach(function (a) { body.appendChild(commentCard(a, S.annotations.indexOf(a) + 1 || items.indexOf(a) + 1)); });
+      var items = S.groups && S.groups[g.page];
+      if (!items) { body.appendChild(el('div', { class: 'tm-loading', text: 'Loading…' })); return; }
+      items = items.filter(function (a) { return belongsHere(a) && passes(a); });
+      items.slice().reverse().forEach(function (a) {
+        var here = S.annotations.filter(function (x) { return x.id === a.id; })[0];
+        body.appendChild(commentCard(here || a, here ? S.annotations.indexOf(here) + 1 : items.indexOf(a) + 1));
+      });
     });
+    if (groups.length > shown.length) {
+      var rest = groups.length - shown.length;
+      body.appendChild(el('button', { class: 'tm-btn tm-btn--outline tm-more', type: 'button', disabled: !!S.allLoading, onClick: function () { S.shownPages = (S.shownPages || PAGE_BATCH) + PAGE_BATCH; renderDrawer(); loadAllPages(false); } },
+        [S.allLoading ? 'Loading…' : 'Show ' + Math.min(PAGE_BATCH, rest) + ' more page' + (Math.min(PAGE_BATCH, rest) === 1 ? '' : 's') + ' (' + rest + ' left)']));
+    }
     if (shared.length) {
       body.appendChild(el('button', { class: 'tm-group', type: 'button', 'aria-expanded': S.sharedCollapsed ? 'false' : 'true', onClick: function () { S.sharedCollapsed = !S.sharedCollapsed; renderDrawer(); } },
         [(S.sharedCollapsed ? '\u25b8 ' : '\u25be ') + 'Shared components & site-wide (' + shared.length + ')']));

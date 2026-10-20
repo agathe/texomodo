@@ -39,7 +39,7 @@
 
     function start(opts) {
       load().then(function (api) { api.start(Object.assign({ base: base }, opts || {})); })
-        .catch(function (err) { console.warn('[review] unavailable:', err && err.message); });
+        .catch(function (err) { console.warn('[review] unavailable:', err && (err.stack || err.message)); });
     }
 
     // Where the button sits. The page chooses with attributes on the script tag:

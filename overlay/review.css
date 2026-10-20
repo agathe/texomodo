@@ -151,6 +151,8 @@ body.tm-drawer-open #tm-toolbar { left: calc((100vw - var(--tm-drawer-w)) / 2); 
 .tm-group--page .tm-group-path { font-weight: 500; color: var(--tm-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
 .tm-group--current .tm-group-path { color: var(--tm-accent-dark); }
 .tm-group--page .tm-count { font-weight: 600; color: var(--tm-muted); }
+.tm-loading { color: var(--tm-muted); font-size: 12px; padding: 6px 0 10px; }
+.tm-more { width: 100%; justify-content: center; margin: 8px 0 4px; }
 .tm-icon-btn { border: 1px solid var(--tm-line); background: #fff; color: var(--tm-ink); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-grid; place-items: center; }
 .tm-icon-btn:hover { border-color: var(--tm-accent); }
 .tm-icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }

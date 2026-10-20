@@ -222,8 +222,12 @@ export interface ChangeRequest {
 /** Storage adapter implemented by review.js for Supabase and (dev only) localStorage. */
 export interface ReviewStore {
   listForPage(page: string): Promise<Annotation[]>;
-  /** Every comment of the site; the drawer derives the page list from it and shows the rest under "All pages". */
-  listAll(): Promise<Annotation[]>;
+  /** Total number of comments on the site (one HEAD request), for the "All pages" switch. */
+  count(): Promise<number | null>;
+  /** Lightweight index of every comment on the site, loaded only when "All pages" is opened. */
+  index(): Promise<Array<Pick<Annotation, 'id' | 'page' | 'title' | 'status' | 'scope' | 'build'>>>;
+  /** Full rows for a handful of page groups ("All pages" loads a few pages at a time). */
+  listPages(pages: string[]): Promise<Annotation[]>;
   create(input: Omit<Annotation, 'id' | 'createdAt' | 'updatedAt' | 'replies' | 'authorId'>): Promise<Annotation>;
   reply(annotationId: string, body: string): Promise<Reply>;
   setStatus(annotationId: string, status: AnnotationStatus, resolution?: AnnotationResolution): Promise<void>;
